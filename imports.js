@@ -485,6 +485,28 @@ class Matrix{
         return new Matrix(arr);
     }
 
+    /**
+     * 
+     * @param {function} f 
+     * @returns applies a function to each coordinate of a matrix
+     */
+    apply(f){
+
+        let arr = [];
+        for(let i=0; i<this.data.length; i++){
+
+            let row = [];
+
+            for(let j=0; j<this.data[0].length; j++){
+                row.push(f(this.data[i][j]));
+            }
+
+            arr.push(row);
+        }
+
+        return new Matrix(arr);
+    }
+
     static rotation(theta){
         return new Matrix([[Math.cos(theta), -Math.sin(theta)],[Math.sin(theta),Math.cos(theta)]]);
     }
@@ -549,7 +571,6 @@ class Matrix{
         return new Matrix(A);
     }
 }
-
 
 class Graph{
     /**
