@@ -1,104 +1,3 @@
-// class Neural_Network{
-
-//     /**
-//      * 
-//      * @param {array} system layer structure (index 0 is input layer, index 1 is first hidden...)
-//      * @param {Matrix} data Training data
-//      * @param {Matrix/Vector} target Target Predictions
-//      * @param {Int} niter 
-//      * @param {float} alpha 
-//      * @param {*} thetas 
-//      */
-//     constructor(system, data, target, niter = 1000, alpha = 1, thetas = null){
-//         this.system = system;
-//         this.data = data;
-//         this.target = target;
-//         this.niter = niter;
-//         this.alpha = alpha;
-//         this.thetas = thetas;
-//     }
-
-//     generateThetas(){
-//         if(!thetas){
-//             var thetas = [];
-//             for(let layer=1; layer<this.system.length; layer++){
-//                 thetas.push([]);
-//                 for(let neuron=0; neuron<this.system[layer]; neuron++){
-//                     thetas[thetas.length-1].push(jn.randArr(this.system[layer-1]+1));
-//                 }
-//             }
-//             this.thetas = thetas;
-//         }
-//     }
-
-//     forwardProp(x0){
-//         let t = [];
-//         for(let i=0; i<x0.length; i++){
-//             t.push(x0[i]);
-//         }
-//         t.splice(0,0,1);
-//         var values = [t];
-//         for(let layer=1; layer<this.system.length; layer++){
-//             let temp = jn.lstSigmoid(jn.operator(this.thetas[layer-1], values[layer-1]));
-//             temp.splice(0,0,1);
-//             values.push(temp);
-//         }
-//         return values
-//     }
-
-//     backProp(){
-//         for(let point=0; point<this.data.length; point++){ //for each data point
-//             let values = this.forwardProp(this.data[point]); //calculate all of the values
-//             let deltas = [[]]; //first (last) layer of deltas
-//             for(let i=1; i<values[values.length-1].length; i++){ //ignore bias which is the first element
-//                 deltas[0].push(-2*(this.target[point][i-1]-values[values.length-1][i])*values[values.length-1][i]*(1-values[values.length-1][i])) //definition of deltas
-//                 for(let j=0; j<values[values.length-2].length; j++){
-//                     this.thetas[this.thetas.length-1][i-1][j]-=this.alpha * deltas[0][deltas[0].length-1]*values[values.length-2][j] //gradient descent
-//                 }
-//             }
-
-//             for(let layer=values.length-2; layer>0; layer--){ //dont include first layer because we already calculated it, dont include last because its the input layer
-//                 deltas.push([]);
-//                 for(let i=1; i<values[layer].length; i++){ //ignore bias, doesnt matter for backwards propagation
-//                     let s = 0; //calulate dot product by hand because numpy can go suck a fucking lollipop. this is the dot product/sum in definition for deltas
-//                     for(let k=1; k<values[layer+1].length; k++){ //once again, fuck the bias
-//                         s+=deltas[deltas.length-2][k-1] * this.thetas[layer][k-1][i] //deltas doesnt include a bias (starts from index 1), so we k-1 instead of k. additionaly, thetas array is made so thetas[layer]
-//                     } //are the thetas for the next layer, none go to bias, 2d arr which is practically a single dim array so we take 0 coord, ith neuron is what we are looking for
-//                     deltas[deltas.length-1].push(s*values[layer][i]*(1-values[layer][i])); 
-//                     for(let j=0; j<values[layer-1].length; j++){//adjust all of the thetas
-//                         this.thetas[layer-1][i-1][j] -= this.alpha * deltas[deltas.length-1][deltas[deltas.length-1].length-1]*values[layer-1][j]; //read
-//                     }
-//                 }
-//             }
-//         }
-//     }
-
-//     solve(){
-//         this.generateThetas();
-//         for(let run=0; run<this.niter; run++){
-//             this.backProp();
-//         }        
-//     }
-    
-
-//     evaluate(){
-//         let count = 0;
-//         for(let i=0; i<this.data.length; i++){
-//             if (jn.areEqual(jn.roundArr(this.predict(this.data[i])), this.target[i])){
-//                 count++;
-//             }
-//         }
-//         return {"count": count, "successRate": count/this.data.length}
-//     }
-
-//     predict(x0){
-//         let temp = this.forwardProp(x0)
-//         temp = temp[temp.length-1];
-//         temp.splice(0,1);
-//         return temp;
-//     }
-// }
-
 class Neural_Network{
 
     //NOTES
@@ -121,7 +20,7 @@ class Neural_Network{
         }
 
         this.activationFunction = jsn.sigmoid;
-        this.errorFunction = (output, target) => {let v = target.sub(output); return v.T().dot(v)[0]};
+        this.alpha = 10;
     }
 
     /**
@@ -131,17 +30,95 @@ class Neural_Network{
     forwardProp(input){
 
         let result = input.T();
+        result = new Matrix([[1]].concat(result.data));
+
+        let values = [];
 
         for(let i=1; i<this.structure.length; i++){
-            result = this.thetas[i-1].dot(result).apply(this.activationFunction); //calculate linear combination defined by theta coefficients and apply activation function
+            //calculate linear combination defined by theta coefficients and apply activation function + add bias
+            values.push(result);
+            result = Neural_Network.addBias(this.thetas[i-1].dot(result).apply(this.activationFunction));
         }
 
-        return result;
+        values.push(result);
+
+        //return output column minus the bias that was added on the last run of the previous loop
+        return values;
     }
 
-    backProp(input, target){
-        https://towardsdatascience.com/everything-you-need-to-know-about-neural-networks-and-backpropagation-machine-learning-made-easy-e5285bc2be3a
+    backProp(input, target){ //currently the inputs are arrays, might change later
+
+        let values = this.forwardProp(new Matrix([input])); //calculate output
+        let y = new Matrix([target]);
+        y = y.T();
+
+        //first layer of thetas
+        
+        let x = values[values.length-2]; //previous layer
+        let xm = Neural_Network.removeBias(values[values.length-1]); //current layer
+
+        let gammas = [xm.sub(y).T()];
+
+        for(let i=0; i<this.structure[this.structure.length-1]; i++){
+
+            //i-1 appears where the data structures don't have a bias element to ignore
+
+            let theta_i = new Matrix([this.thetas[this.thetas.length-1].data[i]]);
+
+            for(let j=0; j<this.structure[this.structure.length-2]+1; j++){ //+1 since we also have bias
+
+                this.thetas[this.thetas.length-1].data[i][j] -= this.alpha * 
+                ( (xm.data[i][0]-y.data[i][0]) * x.data[j][0] * jsn.dsigmoid(theta_i.dot(x).data[0][0]));
+
+            }
+
+        }
+
+        //all of the other layers
+
+        for(let k=this.thetas.length-2; k>-1; k--){
+
+            //calculate the latest gamma
+            //this is the vector of the dsigmoid(...) that is direct-producted into the theta matrix
+            let pvec = [];
+            for(let r=0; r<this.thetas[k+1].data.length; r++){
+                pvec.push(this.thetas[k+1].subMatrix(r, r+1, 0, -1).dot(values[k+1]).data[0]);
+            }
+
+            pvec = new Matrix(pvec).apply(jsn.dsigmoid);
+
+            //calculate it and add to gammas
+            let newGamma = gammas[0].dot( (this.thetas[k+1].subMatrix(0, -1, 1, -1).directProductEveryColumn(pvec)) );
+            gammas.splice(0, 0, newGamma);
+
+            //updates thetas
+            for(let i=0; i<this.thetas[k].data.length; i++){
+                for(let j=0; j<this.thetas[k].data[0].length; j++){
+                    this.thetas[k].data[i][j] -= this.alpha * (
+                        values[k].data[j] * values[k+1].data[i][0] * (1-values[k+1].data[i][0]) *
+                        gammas[0].data[0][i]
+                    );
+                }
+            }
+        }
     }
+
+    evaluate(input){
+
+        input = new Matrix([input]);
+
+        let result = input.T();
+        result = new Matrix([[1]].concat(result.data));
+
+        for(let i=1; i<this.structure.length; i++){
+            //calculate linear combination defined by theta coefficients and apply activation function + add bias
+            result = Neural_Network.addBias(this.thetas[i-1].dot(result).apply(this.activationFunction));
+        }
+
+        //return output column minus the bias that was added on the last run of the previous loop
+        return Neural_Network.removeBias(result);
+    }
+
 
     genRandThetas(){
 
@@ -161,7 +138,7 @@ class Neural_Network{
                 let currentNodeThetas = [];
 
                 //for each node in the previous layer we add a corresponding random theta value
-                for(let k=0; k<this.structure[i-1]; k++){
+                for(let k=0; k<this.structure[i-1]+1; k++){ //the +1 accounts for a bias node
                     currentNodeThetas.push(Math.random());
                 }
 
@@ -176,4 +153,27 @@ class Neural_Network{
         return thetas;
     }
 
+    static addBias(M){
+        return new Matrix([[1]].concat(M.data))
+    }
+
+    static removeBias(M){
+        return new Matrix(M.data.slice(1));
+    }
+
+}
+
+let NN = new Neural_Network([2,3,2]);
+
+let data = [[0,0], [1,0], [0,1], [1,1]];
+let target = [[0,0], [0,0], [1,1], [1,1]];
+
+for(let i=0; i<100; i++){
+    for(let j=0; j<4; j++){
+        NN.backProp(data[j], target[j]);
+    }
+}
+
+for(let i=0; i<4; i++){
+    console.log(NN.evaluate(data[i]));
 }

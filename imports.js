@@ -182,6 +182,11 @@ class jsn{
         // return Math.atan(z)/Math.PI+1/2;
     }
 
+    static dsigmoid(z){
+        let t = jsn.sigmoid(z);
+        return t*(1-t);
+    }
+
     static transform(arr, f){
         let b = [];
         
@@ -507,6 +512,37 @@ class Matrix{
         return new Matrix(arr);
     }
 
+    directProduct(A){
+
+        if(A.data.length!=this.data.length || A.data[0].length!=this.data[0].length){
+            error("Matrix Dimensions don't Match");
+        }
+
+        let B = [];
+
+        for(let i=0; i<this.data.length; i++){
+            let row = [];
+            for(let j=0; j<this.data[0].length; j++){
+                row.push(this.data[i][j]*A.data[i][j]);
+            }
+            B.push(row);
+        }
+
+        return new Matrix(B);
+    }
+
+    directProductEveryColumn(column){
+        let A = [];
+        for(let i=0; i<this.data.length; i++){
+            let row = [];
+            for(let j=0; j<this.data[0].length; j++){
+                row.push(this.data[i][j] * column.data[i][0]);
+            }
+            A.push(row);
+        }
+        return new Matrix(A);
+    }
+
     static rotation(theta){
         return new Matrix([[Math.cos(theta), -Math.sin(theta)],[Math.sin(theta),Math.cos(theta)]]);
     }
@@ -520,6 +556,14 @@ class Matrix{
      * @returns submatrix bounded by rows r0-r1 and columns c0-c1
      */
     subMatrix(r0, r1, c0, c1){
+
+        if(r1 ==-1){
+            r1 = this.data.length;
+        }
+        if(c1 ==-1){
+            c1 = this.data[0].length;
+        }
+
         let A = [];
         for(let i=r0; i<r1; i++){
             A.push([]);
