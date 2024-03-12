@@ -4,7 +4,6 @@ class Neural_Network{
     // - the default activation function is a sigmoid.
 
     //TO-DO LIST
-    // - include a function that automatically adds a bias node to each layer
     // - add a function to change the activation function
 
     constructor(structure, thetas = null){
@@ -65,10 +64,12 @@ class Neural_Network{
 
             let theta_i = new Matrix([this.thetas[this.thetas.length-1].data[i]]);
 
+            let c = this.alpha * 
+            ( (xm.data[i][0]-y.data[i][0]) * jsn.dsigmoid(theta_i.dot(x).data[0][0]));
+
             for(let j=0; j<this.structure[this.structure.length-2]+1; j++){ //+1 since we also have bias
 
-                this.thetas[this.thetas.length-1].data[i][j] -= this.alpha * 
-                ( (xm.data[i][0]-y.data[i][0]) * x.data[j][0] * jsn.dsigmoid(theta_i.dot(x).data[0][0]));
+                this.thetas[this.thetas.length-1].data[i][j] -=  x.data[j][0] * c;
 
             }
 
@@ -93,11 +94,10 @@ class Neural_Network{
 
             //updates thetas
             for(let i=0; i<this.thetas[k].data.length; i++){
+                let c = this.alpha * values[k+1].data[i][0] * (1-values[k+1].data[i][0]) *
+                gammas[0].data[0][i];
                 for(let j=0; j<this.thetas[k].data[0].length; j++){
-                    this.thetas[k].data[i][j] -= this.alpha * (
-                        values[k].data[j] * values[k+1].data[i][0] * (1-values[k+1].data[i][0]) *
-                        gammas[0].data[0][i]
-                    );
+                    this.thetas[k].data[i][j] -= values[k].data[j] * c;
                 }
             }
         }
